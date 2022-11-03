@@ -1,1 +1,1 @@
-battlesnake play -W 11 -H 11 --name 'Python Starter Project' --url http://localhost:8000 -g solo --browser
+battlesnake play -W 11 -H 11 --name John --url http://localhost:8000 -g solo --browser
