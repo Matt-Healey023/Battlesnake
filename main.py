@@ -22,7 +22,7 @@ def move(game_state: typing.Dict) -> typing.Dict:
     is_move_safe = {"up": True, "down": True, "left": True, "right": True}
 
     # Body check
-    head = game_state["you"]["body"][0]
+    head = game_state['you']['head']
     body = game_state['you']['body'][1:]
 
     for i in range(len(body)):
@@ -58,9 +58,9 @@ def move(game_state: typing.Dict) -> typing.Dict:
 
     # Basic enemy avoidance
     for snake in game_state['board']['snakes']:
-        for i in range(len(snake)):
-            x = head['x'] - snake[i]['x']
-            y = head['y'] - snake[i]['y']
+        for i in range(len(snake['body'])):
+            x = head['x'] - snake['body'][i]['x']
+            y = head['y'] - snake['body'][i]['y']
             if y == 0:
                 if x == 1:
                     is_move_safe['left'] = False
