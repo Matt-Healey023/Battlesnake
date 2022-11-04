@@ -98,6 +98,8 @@
 #             elif is_move_safe['left']:
 #                 next_move = 'left'
 
+import random
+
 def checkForHazards(game_state):
     # Initialize all vars
     safe = {"up": True, "down": True, "left": True, "right": True}
@@ -154,4 +156,44 @@ def checkForHazards(game_state):
 
     return safe
 
-#def moveTowardsFood():
+def moveTowardsFood(game_state, safe):
+    # Initialize all vars
+    head = game_state['you']['head']
+    food = game_state['board']['food']
+    next = None
+    
+    if len(food) > 0:
+        index = -1
+        close = 0
+        # Find closest food
+        for i in range(len(food)):
+            dis = abs(head['x'] - food[i]['x']) + abs(head['y'] - food[i]['y'])
+            if index == -1 or dis < close:
+                index = i
+                close = dis
+        
+        # Find safe move towards food
+        pellet = food[index]
+        if head['x'] - pellet['x'] < 0 and safe['right']: next = 'right'
+        elif head['x'] - pellet['x'] > 0 and safe['left']: next = 'left'
+        if next == None:
+            if head['y'] - pellet['y'] < 0 and safe['up']: next = 'up'
+            elif head['y'] - pellet['y'] > 0 and safe['down']: next = 'down'
+
+    return next
+
+def moveSnake(game_state):
+    next = None
+    isSafe = checkForHazards(game_state)
+    next = moveTowardsFood(game_state, isSafe)
+
+    safe = []
+    for move, isSafe in isSafe.items():
+        if isSafe:
+            safe.append(move)
+
+    if next == None:
+        if len(safe) > 0: next = random.choice(safe)
+        else: next ="down"
+
+    return next

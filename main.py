@@ -1,6 +1,5 @@
 import random
 import typing
-import math
 from move import *
 
 def info() -> typing.Dict:
@@ -21,16 +20,7 @@ def end(game_state: typing.Dict):
     print("GAME OVER\n")
 
 def move(game_state: typing.Dict) -> typing.Dict:
-    next = None
-    isSafe = checkForHazards(game_state)
-
-    safe = []
-    for move, isSafe in isSafe.items():
-        if isSafe:
-            safe.append(move)
-
-    if next == None:
-        next = random.choice(safe)
+    next = moveSnake(game_state)
 
     print(f"MOVE {game_state['turn']}: {next}")
     return {"move": next}
