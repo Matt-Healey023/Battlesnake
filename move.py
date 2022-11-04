@@ -126,33 +126,33 @@ def checkForHazards(game_state):
             if x == 1: safe['left'] = False
             if x == -1: safe['right'] = False
 
-    # Check for neaby heads
-    for eHead in eHeads:
-        x = eHead[0]['x'] - head['x']
-        y = eHead[0]['y'] - head['y']
-        # '>=' to play safe, '>' to be agressive
-        if eHead[1] >= size:
-            if x == -1:
-                if y == -1:
-                    safe['left'] = False
-                    safe['down'] = False
-                if y == 1:
-                    safe['left'] = False
-                    safe['up'] = False
-            if x == 1:
-                if y == -1:
-                    safe['right'] = False
-                    safe['down'] = False
-                if y == 1:
-                    safe['right'] = False
-                    safe['up'] = False
-
     # Check for boundries
     w, h = game_state['board']['width'], game_state['board']['width']
     if head['x'] == w - 1: safe['right'] = False
     elif head['x'] == 0: safe['left'] = False
     if head['y'] == h - 1: safe['up'] = False
     elif head['y'] == 0: safe['down'] = False
+
+    # Check for neaby heads
+    for eHead in eHeads:
+        x = eHead[0]['x'] - head['x']
+        y = eHead[0]['y'] - head['y']
+        # '>=' to play safe, '>' to be agressive and probably die
+        if eHead[1] >= size:
+            if x == -1:
+                if y == -1 and (safe['right'] or safe['up']):
+                    safe['left'] = False
+                    safe['down'] = False
+                if y == 1 and (safe['right'] or safe['down']):
+                    safe['left'] = False
+                    safe['up'] = False
+            if x == 1:
+                if y == -1 and (safe['left'] or safe['up']):
+                    safe['right'] = False
+                    safe['down'] = False
+                if y == 1 and (safe['left'] or safe['down']):
+                    safe['right'] = False
+                    safe['up'] = False
 
     return safe
 
