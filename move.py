@@ -99,26 +99,53 @@
 #                 next_move = 'left'
 
 def checkForHazards(game_state):
+    # Initialize all vars
     safe = {"up": True, "down": True, "left": True, "right": True}
     head = game_state['you']['head']
+    size = game_state['you']['length']
+    eHeads = []
     hazards = []
     
+    # Create lists with hazards and heads
     hazards.extend(game_state['board']['hazards'])
     hazards.extend(game_state['you']['body'][1:])
     for snake in game_state['board']['snakes']:
         hazards.extend(snake['body'])
+        eHeads.append((snake['head'], snake['length']))
 
+    # Check for nearby hazards
     for hazard in hazards:
         x = head['x'] - hazard['x']
         y = head['y'] - hazard['y']
+        if x == 0:
+            if y == 1: safe['down'] = False
+            if y == -1: safe['up'] = False
         if y == 0:
             if x == 1: safe['left'] = False
             if x == -1: safe['right'] = False
 
-        if x == 0:
-            if y == 1: safe['down'] = False
-            if y == -1: safe['up'] = False
+    # Check for neaby heads
+    for eHead in eHeads:
+        x = head['x'] - eHead[0]['x']
+        y = head['y'] - eHead[0]['y']
+        # '>=' to play safe, '>' to be agressive
+        if eHead[1] >= size:
+            if x == -1:
+                if y == -1:
+                    safe['left'] = False
+                    safe['down'] = False
+                if y == 1:
+                    safe['left'] = False
+                    safe['up'] = False
+            if x == 1:
+                if y == -1:
+                    safe['right'] = False
+                    safe['down'] = False
+                if y == 1:
+                    safe['right'] = False
+                    safe['up'] = False
 
+    # Check for boundries
     w, h = game_state['board']['width'], game_state['board']['width']
     if head['x'] == w - 1: safe['right'] = False
     elif head['x'] == 0: safe['left'] = False
