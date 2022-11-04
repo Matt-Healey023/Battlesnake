@@ -128,8 +128,8 @@ def checkForHazards(game_state):
 
     # Check for neaby heads
     for eHead in eHeads:
-        x = head['x'] - eHead[0]['x']
-        y = head['y'] - eHead[0]['y']
+        x = eHead['x'] - head[0]['x']
+        y = eHead['y'] - head[0]['y']
         # '>=' to play safe, '>' to be agressive
         if eHead[1] >= size:
             if x == -1:
