@@ -46,26 +46,26 @@ def checkForHazards(game_state):
                 if y == -1 and (safe['right'] or safe['up']):
                     safe['left'] = False
                     safe['down'] = False
-                if y == 1 and (safe['right'] or safe['down']):
+                elif y == 1 and (safe['right'] or safe['down']):
                     safe['left'] = False
                     safe['up'] = False
+                elif y == 1 or y == -1: yolo = True
             if x == 1:
                 if y == -1 and (safe['left'] or safe['up']):
                     safe['right'] = False
                     safe['down'] = False
-                if y == 1 and (safe['left'] or safe['down']):
+                elif y == 1 and (safe['left'] or safe['down']):
                     safe['right'] = False
                     safe['up'] = False
+                elif y == 1 or y == -1: yolo = True
             # Horizontal
             if y == 0:
                 if x == -2 and (safe['down'] or safe['up'] or safe['right']): safe['left'] = False
                 elif x == 2 and (safe['down'] or safe['up'] or safe['left']): safe['right'] = False
-                else: yolo = True
             # Vertical
             if x == 0:
                 if y == -2 and (safe['right'] or safe['up'] or safe['left']): safe['down'] = False
                 elif y == 2 and (safe['right'] or safe['down'] or safe['left']): safe['up'] = False
-                else: yolo = True
 
     return safe, yolo
 
