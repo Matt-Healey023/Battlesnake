@@ -34,6 +34,7 @@ def checkForHazards(game_state):
     elif head['y'] == 0: safe['down'] = False
 
     # Check for nearby heads
+    yolo = False
     for eHead in eHeads:
         x = eHead[0]['x'] - head['x']
         y = eHead[0]['y'] - head['y']
@@ -58,15 +59,17 @@ def checkForHazards(game_state):
             # Horizontal
             if y == 0:
                 if x == -2 and (safe['down'] or safe['up'] or safe['right']): safe['left'] = False
-                if x == 2 and (safe['down'] or safe['up'] or safe['left']): safe['right'] = False
+                elif x == 2 and (safe['down'] or safe['up'] or safe['left']): safe['right'] = False
+                else: yolo = True
             # Vertical
             if x == 0:
                 if y == -2 and (safe['right'] or safe['up'] or safe['left']): safe['down'] = False
-                if y == 2 and (safe['right'] or safe['down'] or safe['left']): safe['up'] = False
+                elif y == 2 and (safe['right'] or safe['down'] or safe['left']): safe['up'] = False
+                else: yolo = True
 
-    return safe
+    return safe, yolo
 
-def moveTowardsFood(game_state, safe):
+def moveTowardsFood(game_state, safe, yolo):
     # Initialize all vars
     head = game_state['you']['head']
     food = game_state['board']['food']
@@ -81,9 +84,16 @@ def moveTowardsFood(game_state, safe):
             if index == -1 or dis < close:
                 index = i
                 close = dis
-        
-        # Find safe move towards food
+
         pellet = food[index]
+        # Bad situation abort path to food
+        if close == 1 and yolo:
+            if head['x'] - pellet['x'] < 0: safe['right'] = False
+            elif head['x'] - pellet['x'] > 0: safe['left'] = False
+            elif head['y'] - pellet['y'] < 0: safe['up'] = False
+            elif head['y'] - pellet['y'] > 0: safe['down'] = False
+
+        # Find safe move towards food
         if head['x'] - pellet['x'] < 0 and safe['right']: next = 'right'
         elif head['x'] - pellet['x'] > 0 and safe['left']: next = 'left'
         if next == None:
@@ -94,8 +104,8 @@ def moveTowardsFood(game_state, safe):
 
 def moveSnake(game_state):
     next = None
-    isSafe = checkForHazards(game_state)
-    next = moveTowardsFood(game_state, isSafe)
+    isSafe, yolo = checkForHazards(game_state)
+    next = moveTowardsFood(game_state, isSafe, yolo)
 
     safe = []
     for move, isSafe in isSafe.items():
