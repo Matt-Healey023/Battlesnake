@@ -1,7 +1,6 @@
 import random
 
 def checkForHazards(game_state):
-    # Initialize all vars
     safe = {"up": True, "down": True, "left": True, "right": True}
     head = game_state['you']['head']
     size = game_state['you']['length']
@@ -21,10 +20,10 @@ def checkForHazards(game_state):
         y = head['y'] - hazard['y']
         if x == 0:
             if y == 1: safe['down'] = False
-            if y == -1: safe['up'] = False
-        if y == 0:
+            elif y == -1: safe['up'] = False
+        elif y == 0:
             if x == 1: safe['left'] = False
-            if x == -1: safe['right'] = False
+            elif x == -1: safe['right'] = False
 
     # Check for boundries
     w, h = game_state['board']['width'], game_state['board']['width']
@@ -67,10 +66,40 @@ def checkForHazards(game_state):
                 if y == -2 and (safe['right'] or safe['up'] or safe['left']): safe['down'] = False
                 elif y == 2 and (safe['right'] or safe['down'] or safe['left']): safe['up'] = False
 
-    return safe, yolo
+    return safe, hazards, yolo
+
+def smartMove(game_state, hazards):
+    zones = {'up': set(), 'down': set(), 'left': set(), 'right': set()}
+    keys = ['up', 'down', 'left', 'right']
+
+    convertedHazards = [(game_state['you']['head']['x'], game_state['you']['head']['y'])]
+    for hazard in hazards:
+        convertedHazards.append((hazard['x'], hazard['y']))
+    print(convertedHazards)
+
+    def floodFill(current, i=-1):
+        if i != -1:
+            if current not in convertedHazards and current not in zones[keys[i]] and current[0] >= 0 and current[0] < game_state['board']['width'] and current[1] >= 0 and current[1] < game_state['board']['height']:
+                zones[keys[i]].add(current)
+            else:
+                return
+
+        directions = [(0, 1), (0, -1), (-1, 0), (1, 0)]
+
+        section = i
+        for j in range(4):
+            if i == -1: section = j
+            floodFill((current[0] + directions[j][0], current[1] + directions[j][1]), section)
+
+    floodFill(convertedHazards[0])
+    value = {}
+    for i in range(4):
+        value[keys[i]] = len(zones[keys[i]])
+
+    return value
+
 
 def moveTowardsFood(game_state, safe, yolo):
-    # Initialize all vars
     head = game_state['you']['head']
     food = game_state['board']['food']
     next = None
@@ -104,7 +133,9 @@ def moveTowardsFood(game_state, safe, yolo):
 
 def moveSnake(game_state):
     next = None
-    isSafe, yolo = checkForHazards(game_state)
+    isSafe, hazards, yolo = checkForHazards(game_state)
+    # TODO: Only go for food if the zone the food is in is larger than the snake's size
+    zones = smartMove(game_state, hazards)
     next = moveTowardsFood(game_state, isSafe, yolo)
 
     safe = []
