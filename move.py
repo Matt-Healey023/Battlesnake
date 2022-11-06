@@ -74,28 +74,28 @@ def checkForHazards(game_state):
     zones = smartMove(game_state, hazards)
 
     # Check if it can fit
-    canFit = {'up': True, 'down': True, 'left': True, 'right': True}
-    max = 0
-    key = ''
-    for k in zones.keys():
-        if len(zones[k]) > max:
-            key = k
-            max = len(zones[k])
-        if len(zones[k]) < size: canFit[k] = False
+    # canFit = {'up': True, 'down': True, 'left': True, 'right': True}
+    # max = 0
+    # key = ''
+    # for k in zones.keys():
+    #     if len(zones[k]) > max:
+    #         key = k
+    #         max = len(zones[k])
+    #     if len(zones[k]) < size: canFit[k] = False
 
-    fit = False
-    for k in canFit.keys():
-        if canFit[k]:
-            fit = True
-            break
+    # fit = False
+    # for k in canFit.keys():
+    #     if canFit[k]:
+    #         fit = True
+    #         break
 
-    if not fit:
-        for k in safe.keys():
-            safe[k] = False
-        safe[key] = True
-    else:
-        for k in safe.keys():
-            if not canFit[k]: safe[k] = False
+    # if not fit:
+    #     for k in safe.keys():
+    #         safe[k] = False
+    #     safe[key] = True
+    # else:
+    #     for k in safe.keys():
+    #         if not canFit[k]: safe[k] = False
 
     return safe, hazards, zones
 
