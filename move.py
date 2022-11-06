@@ -140,8 +140,13 @@ def moveTowardsFood(game_state, safe, zones):
                 index = i
                 close = dis
 
-        # Find safe move towards food
         pellet = food[index]
+        coord = (pellet['x'], pellet['y'])
+        for key in zones.keys():
+            if coord not in zones[key]:
+                safe[key] = False
+
+        # Find safe move towards food
         if head['x'] - pellet['x'] < 0 and safe['right']: next = 'right'
         elif head['x'] - pellet['x'] > 0 and safe['left']: next = 'left'
         if next == None:
