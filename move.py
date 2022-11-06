@@ -18,7 +18,7 @@ def checkForHazards(game_state):
     hazards.extend(game_state['board']['hazards'])
     hazards.extend(game_state['you']['body'][1:])
     for snake in game_state['board']['snakes']:
-        if snake['head']['x'] != head['x'] and snake['head']['y'] != head['y']:
+        if snake['id'] != game_state['you']['id']:
             hazards.extend(snake['body'])
             eHeads.append((snake['head'], snake['length']))
 
