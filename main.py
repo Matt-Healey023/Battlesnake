@@ -9,8 +9,8 @@ def info() -> typing.Dict:
         "apiversion": "1",
         "author": "matt-healey023",
         "color": "#EA8C0E",
-        "head": "gamer",
-        "tail": "hook"
+        "head": "pirate",
+        "tail": "cosmic-horror"
     }
 
 def start(game_state: typing.Dict):
