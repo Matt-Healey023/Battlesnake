@@ -46,7 +46,7 @@ def checkForHazards(game_state):
         y = eHead[0]['y'] - head['y']
         # '>=' to play safe, '>' to be agressive and probably die
         # Only be scared if you have a way out
-        if eHead[1] >= size:
+        if eHead[1] > size:
             # Diagonal
             if x == -1:
                 if y == -1 and (safe['right'] or safe['up']):
