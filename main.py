@@ -8,7 +8,7 @@ def info() -> typing.Dict:
     return {
         "apiversion": "1",
         "author": "matt-healey023",
-        "color": "#EA8C0E",
+        "color": "#FF2D00",
         "head": "pirate",
         "tail": "cosmic-horror"
     }
