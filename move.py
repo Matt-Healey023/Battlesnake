@@ -1,6 +1,8 @@
 import random
 
-# TODO: Test if enemy head will cut it off in the next turn
+# TODO: Test if enemy head will cut it off this turn
+# Flag direction that was cut off by potential and cut that direction off if you have other directions to go
+# Only cut that direction off if you can afford to
 
 DIR = {'up': (0, 1), 'down': (0, -1), 'left': (-1, 0), 'right': (1, 0)}
 KEYS = ['up', 'down', 'left', 'right']
@@ -18,12 +20,14 @@ def convertGameState(game_state):
     }
 
     for snake in game_state['board']['snakes']:
-        body = {(b['x'], b['y']) for b in snake['body'][1:]}
+        body = {(b['x'], b['y']) for b in snake['body'][1:-1]}
         head = (snake['head']['x'], snake['head']['y'])
+        tail = (snake['body'][-1]['x'], snake['body'][-1]['y'])
         length = snake['length']
+        new = { 'body': body, 'head': head, 'tail': tail, 'length': length }
 
-        if snake['id'] == game_state['you']['id']: gameState['you'] = { 'body': body, 'head': head, 'length': length }
-        else: gameState['snakes'].append({ 'body': body, 'head': head, 'length': length })
+        if snake['id'] == game_state['you']['id']: gameState['you'] = new
+        else: gameState['snakes'].append(new)
 
     gameState['food'] = {(f['x'], f['y']) for f in game_state['board']['food']}
     gameState['hazards']['real'] = {(h['x'], h['y']) for h in game_state['board']['hazards']}
@@ -46,13 +50,13 @@ def checkZones(gameState):
     floodFill(gameState['you']['head'])
 
 def checkForHazards(gameState):
-    def potentialToKey(coord):
-        unit = (coord[0] - gameState['you']['head'][0], coord[1] - gameState['you']['head'][1])
+    def potentialToKey(origin, coord):
+        unit = (coord[0] - origin[0], coord[1] - origin[1])
         for key in KEYS:
             if DIR[key] == unit: return key
 
-    def keyToPotential(key):
-        return (gameState['you']['head'][0] + DIR[key][0], gameState['you']['head'][1] + DIR[key][1])
+    def keyToPotential(coord, key):
+        return (coord[0] + DIR[key][0], coord[1] + DIR[key][1])
 
     # Create list with hazards
     gameState['hazards']['real'].update(gameState['you']['body'])
@@ -60,11 +64,16 @@ def checkForHazards(gameState):
     for snake in gameState['snakes']:
             gameState['hazards']['real'].update(snake['body'])
             gameState['hazards']['real'].add(snake['head'])
+            for key in KEYS:
+                coord = (keyToPotential(snake['head'], key), snake['length'])
+                gameState['hazards']['potential'].add(coord)
+                if coord[0] in gameState['food']: gameState['hazards']['real'].add(snake['tail'])
 
     # Check for nearby hazards
     potential = set()
     for key in KEYS:
-        coord = keyToPotential(key)
+        coord = keyToPotential(gameState['you']['head'], key)
+        if coord in gameState['food']: gameState['hazards']['real'].add(gameState['you']['tail'])
         if coord in gameState['hazards']['real']: gameState['safe'][key] = False
         else: potential.add(coord)
 
@@ -103,27 +112,21 @@ def checkForHazards(gameState):
         for k in KEYS:
             gameState['safe'][k] = False
         gameState['safe'][key] = True
-        potential = {keyToPotential(k)}
+        potential = {keyToPotential(gameState['you']['head'], k)}
     else:
         for k in KEYS:
             if not canFit[k] and gameState['safe'][k]:
                 gameState['safe'][k] = False
-                potential.remove(keyToPotential(k))
+                potential.remove(keyToPotential(gameState['you']['head'], k))
 
     # Check for nearby heads
-    for snake in gameState['snakes']:
-        for key in KEYS:
-            coord = (snake['head'][0] + DIR[key][0], snake['head'][1] + DIR[key][1])
-            gameState['hazards']['potential'].add(coord)
-            # '>=' to play safe, '>' to be agressive and probably die
-            # Only be scared if you have a way out
-            if coord in potential and snake['length'] >= gameState['you']['length'] and len(potential) > 1:
-                potential.remove(coord)
-                gameState['safe'][potentialToKey(coord)] = False
+    for enemy in gameState['hazards']['potential']:
+        if enemy[0] in potential and enemy[1] >= gameState['you']['length'] and len(potential) > 1:
+            potential.remove(enemy[0])
+            gameState['safe'][potentialToKey(gameState['you']['head'], enemy[0])] = False
 
 def moveTowardsFood(gameState):
     next = None
-    
     if len(gameState['food']) > 0:
         close = -1
         pellet = None
