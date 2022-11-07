@@ -31,6 +31,21 @@ def convertGameState(game_state):
 
     return gameState
 
+def smartMove(gameState):
+    def floodFill(current, i=-1):
+        if i != -1:
+            if current not in gameState['hazards']['real'] and current not in gameState['hazards']['potential'] and current not in gameState['zones'][KEYS[i]] and 0 <= current[0] < gameState['width'] and 0 <= current[1] < gameState['height']:
+                gameState['zones'][KEYS[i]].add(current)
+            else:
+                return
+
+        section = i
+        for j in range(4):
+            if i == -1: section = j
+            floodFill((current[0] + DIR[KEYS[j]][0], current[1] + DIR[KEYS[j]][1]), section)
+
+    floodFill(gameState['you']['head'])
+
 def checkForHazards(gameState):
     # Create list with hazards and heads
     gameState['hazards']['real'].update(gameState['you']['body'])
@@ -63,6 +78,11 @@ def checkForHazards(gameState):
             toRemove.add(coord)
     potential -= toRemove
 
+    def potentialToKey(coord):
+        unit = (coord[0] - gameState['you']['head'][0], coord[1] - gameState['you']['head'][1])
+        for key in KEYS:
+            if DIR[key] == unit: return key
+
     # Check for nearby heads
     for snake in gameState['snakes']:
         for key in KEYS:
@@ -72,7 +92,7 @@ def checkForHazards(gameState):
             # Only be scared if you have a way out
             if coord in potential and snake['length'] >= gameState['you']['length'] and len(potential) > 1:
                 potential.remove(coord)
-                gameState['safe'][key] = False
+                gameState['safe'][potentialToKey(coord)] = False
 
     smartMove(gameState)
 
@@ -95,22 +115,6 @@ def checkForHazards(gameState):
     else:
         for k in KEYS:
             if not canFit[k]: gameState['safe'][k] = False
-
-def smartMove(gameState):
-    def floodFill(current, i=-1):
-        if i != -1:
-            if current not in gameState['hazards']['real'] and current not in gameState['hazards']['potential'] and current not in gameState['zones'][KEYS[i]] and 0 <= current[0] < gameState['width'] and 0 <= current[1] < gameState['height']:
-                gameState['zones'][KEYS[i]].add(current)
-            else:
-                return
-
-        section = i
-        for j in range(4):
-            if i == -1: section = j
-            floodFill((current[0] + DIR[KEYS[j]][0], current[1] + DIR[KEYS[j]][1]), section)
-
-    floodFill(gameState['you']['head'])
-
 
 def moveTowardsFood(gameState):
     next = None
