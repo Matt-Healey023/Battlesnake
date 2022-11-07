@@ -1,168 +1,147 @@
 import random
 
-def isPosSafe(game_state, zones, pos):
-    pellet = (pos['x'], pos['y'])
-    for key in zones.keys():
-        if pellet in zones[key]:
-            if len(zones[key]) > game_state['you']['length']: return True
-            else: return False
+# TODO: When looking for safe zones, take into account possible enemy head positions as to not get trapped in the next move
+# In hazards make 2 lists. One for true hazards and one for potential. Beware potential hazards only if you have other safe paths
 
-def checkForHazards(game_state):
-    safe = {"up": True, "down": True, "left": True, "right": True}
-    head = game_state['you']['head']
-    size = game_state['you']['length']
-    eHeads = []
-    hazards = []
-    
-    # Create lists with hazards and heads
-    hazards.extend(game_state['board']['hazards'])
-    hazards.extend(game_state['you']['body'][1:])
+DIR = {'up': (0, 1), 'down': (0, -1), 'left': (-1, 0), 'right': (1, 0)}
+KEYS = ['up', 'down', 'left', 'right']
+
+def convertGameState(game_state):
+    gameState = {
+        'width': game_state['board']['width'],
+        'height': game_state['board']['height'],
+        'food': set(),
+        'hazards': { 'real': set(), 'potential': set() },
+        'snakes': [],
+        'you': {},
+        'safe': { 'up': True, 'down': True, 'left': True, 'right': True },
+        'zones': { 'up': set(), 'down': set(), 'left': set(), 'right': set() }
+    }
+
     for snake in game_state['board']['snakes']:
-        if snake['id'] != game_state['you']['id']:
-            hazards.extend(snake['body'])
-            eHeads.append((snake['head'], snake['length']))
+        body = {(b['x'], b['y']) for b in snake['body'][1:]}
+        head = (snake['head']['x'], snake['head']['y'])
+        length = snake['length']
+
+        if snake['id'] == game_state['you']['id']: gameState['you'] = { 'body': body, 'head': head, 'length': length }
+        else: gameState['snakes'].append({ 'body': body, 'head': head, 'length': length })
+
+    gameState['food'] = {(f['x'], f['y']) for f in game_state['board']['food']}
+    gameState['hazards']['real'] = {(h['x'], h['y']) for h in game_state['board']['hazards']}
+
+    return gameState
+
+def checkForHazards(gameState):
+    # Create list with hazards and heads
+    gameState['hazards']['real'].update(gameState['you']['body'])
+    gameState['hazards']['real'].add(gameState['you']['head'])
+    for snake in gameState['snakes']:
+            gameState['hazards']['real'].update(snake['body'])
+            gameState['hazards']['real'].add(snake['head'])
 
     # Check for nearby hazards
-    for hazard in hazards:
-        x = head['x'] - hazard['x']
-        y = head['y'] - hazard['y']
-        if x == 0:
-            if y == 1: safe['down'] = False
-            elif y == -1: safe['up'] = False
-        elif y == 0:
-            if x == 1: safe['left'] = False
-            elif x == -1: safe['right'] = False
+    potential = set()
+    for key in KEYS:
+        coord = (gameState['you']['head'][0] + DIR[key][0], gameState['you']['head'][1] + DIR[key][1])
+        if coord in gameState['hazards']['real']: gameState['safe'][key] = False
+        else: potential.add(coord)
 
     # Check for boundries
-    w, h = game_state['board']['width'], game_state['board']['width']
-    if head['x'] == w - 1: safe['right'] = False
-    elif head['x'] == 0: safe['left'] = False
-    if head['y'] == h - 1: safe['up'] = False
-    elif head['y'] == 0: safe['down'] = False
+    toRemove = set()
+    for coord in potential:
+        if coord[0] < 0:
+            gameState['safe']['left'] = False
+            toRemove.add(coord)
+        elif coord[0] >= gameState['width']:
+            gameState['safe']['right'] = False
+            toRemove.add(coord)
+        if coord[1] < 0:
+            gameState['safe']['down'] = False
+            toRemove.add(coord)
+        elif coord[1] >= gameState['height']:
+            gameState['safe']['up'] = False
+            toRemove.add(coord)
+    potential -= toRemove
 
     # Check for nearby heads
-    for eHead in eHeads:
-        x = eHead[0]['x'] - head['x']
-        y = eHead[0]['y'] - head['y']
-        # '>=' to play safe, '>' to be agressive and probably die
-        # Only be scared if you have a way out
-        if eHead[1] > size:
-            # Diagonal
-            if x == -1:
-                if y == -1 and (safe['right'] or safe['up']):
-                    safe['left'] = False
-                    safe['down'] = False
-                elif y == 1 and (safe['right'] or safe['down']):
-                    safe['left'] = False
-                    safe['up'] = False
-            if x == 1:
-                if y == -1 and (safe['left'] or safe['up']):
-                    safe['right'] = False
-                    safe['down'] = False
-                elif y == 1 and (safe['left'] or safe['down']):
-                    safe['right'] = False
-                    safe['up'] = False
-            # Horizontal
-            if y == 0:
-                if x == -2 and (safe['down'] or safe['up'] or safe['right']): safe['left'] = False
-                elif x == 2 and (safe['down'] or safe['up'] or safe['left']): safe['right'] = False
-            # Vertical
-            if x == 0:
-                if y == -2 and (safe['right'] or safe['up'] or safe['left']): safe['down'] = False
-                elif y == 2 and (safe['right'] or safe['down'] or safe['left']): safe['up'] = False
+    for snake in gameState['snakes']:
+        for key in KEYS:
+            coord = (snake['head'][0] + DIR[key][0], snake['head'][1] + DIR[key][1])
+            gameState['hazards']['potential'].add(coord)
+            # '>=' to play safe, '>' to be agressive and probably die
+            # Only be scared if you have a way out
+            if coord in potential and snake['length'] >= gameState['you']['length'] and len(potential) > 1:
+                potential.remove(coord)
+                gameState['safe'][key] = False
 
-    zones = smartMove(game_state, hazards)
+    smartMove(gameState)
 
     # Check if it can fit
     canFit = {'up': True, 'down': True, 'left': True, 'right': True}
     max = 0
     key = ''
-    for k in zones.keys():
-        if len(zones[k]) > max:
-            key = k
-            max = len(zones[k])
-        if len(zones[k]) < size: canFit[k] = False
-
     fit = False
-    for k in canFit.keys():
-        if canFit[k]:
-            fit = True
-            break
+    for k in KEYS:
+        if len(gameState['zones'][k]) > max:
+            key = k
+            max = len(gameState['zones'][k])
+        if len(gameState['zones'][k]) < gameState['you']['length']: canFit[k] = False
+        else: fit = True
 
     if not fit:
-        for k in safe.keys():
-            safe[k] = False
-        safe[key] = True
+        for k in KEYS:
+            gameState['safe'][k] = False
+        gameState['safe'][key] = True
     else:
-        for k in safe.keys():
-            if not canFit[k]: safe[k] = False
+        for k in KEYS:
+            if not canFit[k]: gameState['safe'][k] = False
 
-    return safe, hazards, zones
-
-def smartMove(game_state, hazards):
-    zones = {'up': set(), 'down': set(), 'left': set(), 'right': set()}
-    keys = ['up', 'down', 'left', 'right']
-
-    convertedHazards = [(game_state['you']['head']['x'], game_state['you']['head']['y'])]
-    for hazard in hazards:
-        convertedHazards.append((hazard['x'], hazard['y']))
-
+def smartMove(gameState):
     def floodFill(current, i=-1):
         if i != -1:
-            if current not in convertedHazards and current not in zones[keys[i]] and 0 <= current[0] < game_state['board']['width'] and 0 <= current[1] < game_state['board']['height']:
-                zones[keys[i]].add(current)
+            if current not in gameState['hazards']['real'] and current not in gameState['hazards']['potential'] and current not in gameState['zones'][KEYS[i]] and 0 <= current[0] < gameState['width'] and 0 <= current[1] < gameState['height']:
+                gameState['zones'][KEYS[i]].add(current)
             else:
                 return
-
-        directions = [(0, 1), (0, -1), (-1, 0), (1, 0)]
 
         section = i
         for j in range(4):
             if i == -1: section = j
-            floodFill((current[0] + directions[j][0], current[1] + directions[j][1]), section)
+            floodFill((current[0] + DIR[KEYS[j]][0], current[1] + DIR[KEYS[j]][1]), section)
 
-    floodFill(convertedHazards[0])
-    return zones
+    floodFill(gameState['you']['head'])
 
 
-def moveTowardsFood(game_state, safe, zones):
-    head = game_state['you']['head']
-    food = game_state['board']['food']
+def moveTowardsFood(gameState):
     next = None
     
-    if len(food) > 0:
-        index = -1
-        close = 0
+    if len(gameState['food']) > 0:
+        close = -1
+        pellet = None
         # Find closest food
-        for i in range(len(food)):
-            dis = abs(head['x'] - food[i]['x']) + abs(head['y'] - food[i]['y'])
-            if index == -1 or dis < close:
-                index = i
+        for food in gameState['food']:
+            dis = abs(gameState['you']['head'][0] - food[0]) + abs(gameState['you']['head'][1] - food[1])
+            if close == -1 or dis < close:
+                pellet = food
                 close = dis
 
-        pellet = food[index]
-        # coord = (pellet['x'], pellet['y'])
-        # for key in zones.keys():
-        #     if coord not in zones[key]:
-        #         safe[key] = False
-
         # Find safe move towards food
-        if head['x'] - pellet['x'] < 0 and safe['right']: next = 'right'
-        elif head['x'] - pellet['x'] > 0 and safe['left']: next = 'left'
+        if gameState['you']['head'][0] - pellet[0] < 0 and gameState['safe']['right']: next = 'right'
+        elif gameState['you']['head'][0] - pellet[0] > 0 and gameState['safe']['left']: next = 'left'
         if next == None:
-            if head['y'] - pellet['y'] < 0 and safe['up']: next = 'up'
-            elif head['y'] - pellet['y'] > 0 and safe['down']: next = 'down'
+            if gameState['you']['head'][1] - pellet[1] < 0 and gameState['safe']['up']: next = 'up'
+            elif gameState['you']['head'][1] - pellet[1] > 0 and gameState['safe']['down']: next = 'down'
 
     return next
 
 def moveSnake(game_state):
     next = None
-    # TODO: Only go for food if the zone the food is in is larger than the snake's size
-    isSafe, hazards, zones = checkForHazards(game_state)
-    next = moveTowardsFood(game_state, isSafe, zones)
+    gameState = convertGameState(game_state)
+    checkForHazards(gameState)
+    next = moveTowardsFood(gameState)
 
     safe = []
-    for move, s in isSafe.items():
+    for move, s in gameState['safe'].items():
         if s:
             safe.append(move)
 
